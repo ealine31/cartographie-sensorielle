@@ -1,0 +1,37 @@
+project:
+  type: website
+  output-dir: output
+
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: false
+    theme: cosmo
+    highlight-style: github
+    code-fold: true
+    code-summary: "Voir le code R"
+    embed-resources: true
+    page-layout: full
+    css: custom-style.css
+    resources: header-bg.jpg
+    
+  pdf:
+    toc: true
+    number-sections: false
+    geometry: margin=1in
+    
+  docx:
+    toc: true
+    number-sections: false
+
+# Options de rendu
+execute:
+  echo: false
+  warning: false
+  message: false
+  cache: true  # Cache les résultats (accélère les re-rendus)
+  
+# Langue
+lang: fr
