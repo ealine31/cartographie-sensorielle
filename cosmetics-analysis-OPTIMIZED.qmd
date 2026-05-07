@@ -1,0 +1,393 @@
+---
+title: "Cartographie Sensorielle des Solaires visage"
+date: "`r Sys.Date()`"
+author: " Emilie ALINE "
+format:
+  html:
+    output-file: index.html
+    include-in-header:
+      - text: |
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
+          <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+    toc: false
+    number-sections: false
+    theme: cosmo
+    highlight-style: github
+    code-fold: true
+    code-summary: "Voir le code R"
+    embed-resources: true
+    page-layout: full
+    keep-md: false 
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 14,
+  fig.height = 10,
+  dpi = 100
+)
+
+# Installation automatique des packages s'ils manquent
+packages_required <- c("readr", "dplyr", "tidyr", "FactoMineR", "factoextra", 
+                       "ggplot2", "plotly", "RColorBrewer", "htmltools",   "base64enc")
+
+for (pkg in packages_required) {
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg, quiet = TRUE)
+    library(pkg, character.only = TRUE)
+  }
+}
+```
+::: {.panel-tabset}
+
+# Comment lire cette représentation ?
+Cette carte positionne les produits selon leurs caractéristiques sensorielles mesurées par le panel expert.
+
+**Deux produits proches = des produits perçus comme sensoriellement proches.** Plus ils sont éloignés, plus leurs profils sont distincts.
+Les **couleurs** représentent les groupes de produits identifiés par l'analyse statistique.
+
+
+**Deux façons de lire la carte** :
+
+La carte contient **deux niveaux d'information complémentaires** :
+
+**Les axes — "quels attributs différencient les produits ?"**
+Chaque axe résume les **attributs sensoriels qui varient le plus** entre les produits évalués.
+Plus un produit est positionné à un extrême, plus il est marqué sur ces attributs.
+Un produit au centre est perçu comme neutre sur cette dimension.
+
+**Les groupes colorés — "avec qui se ressemble-t-il ?"**
+Ils regroupent automatiquement les produits qui partagent un **profil sensoriel global similaire**.
+Un groupe n'est pas défini par un seul attribut, mais par une **combinaison de caractéristiques**.
+
+
+# Cartographie interactive
+
+```{r setup-analyses, include=FALSE}
+source("analyses.R")
+source("cluster_descriptions.R")
+# Palette couleurs clusters (vibrante et distinct)
+colors_palette <- c("#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A")
+```
+
+
+### Description des axes
+
+**Axe horizontal (Dimension 1)** : Les produits se positionnant vers la **gauche** tendent vers une **pénétration plus rapide** et un **toucher plus poudré**. Ceux se postionnant vers la **droite** tendent vers un toucher **huileux, collant (hors application), filmogène, résistant, souple et un aspect brillant**. 
+Permet de différencier les produits sur 
+
+**Axe vertical (Dimension 2)** : Les produits se positionnant ves le **haut** tendent vers une **texture épaisse, un savonnage important, une opacité importante et un aspect blanc**. Ceux se positionnant vers le **bas** tendent vers un **étalement facile, une pénétration rapide et un toucher mouillé à l'application**.
+
+
+```{r viz-res.pca-clusters, eval= TRUE, fig.width=28, fig.height=26}
+# ═════════════════════════════════════════════════════════════════════════════
+# CARTOGRAPHIE INTERACTIVE - PRINCIPAL
+# ═════════════════════════════════════════════════════════════════════════════
+
+# Récupération coordonnées res.pca avec clusters
+coord_clusters <- as.data.frame(res.pca$ind$coord[, 1:2])
+coord_clusters$produit <- rownames(moyennes)
+coord_clusters$cluster <- as.factor(clusters)
+
+
+# Créer texte hover riche (HTML) avec descriptions clusters
+coord_clusters$hover_text <- sapply(1:nrow(coord_clusters), function(i) {
+  cluster_id <- as.character(coord_clusters$cluster[i])
+  desc <- cluster_descriptions[[cluster_id]]
+  
+  paste0(
+    "<b style='font-size:14px; color:#333;'>", 
+    coord_clusters$produit[i], 
+    "</b><br><br>",
+    
+    "<hr style='border: 1px solid #ddd; margin: 8px 0;'>",
+    "<b style='font-size:13px; color:#FFFFFF;'>",
+    desc$titre,
+    "</b><br>",
+    "<p style='font-size:12px; margin: 8px 0;'>",
+    desc$description,
+    "</p>"
+  )
+})
+
+# Palette couleurs clusters (vibrante et distinct)
+#colors_palette <- c("#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A")
+
+# Créer tous les cercles AVANT le graphique
+hulls_list <- list()
+
+for (cluster_id in 1:n_clusters) {
+  cluster_data <- coord_clusters[coord_clusters$cluster == cluster_id, ]
+  
+  if (nrow(cluster_data) > 2) {
+    hull_pts <- chull(cluster_data$Dim.1, cluster_data$Dim.2)
+    hull_x <- c(cluster_data$Dim.1[hull_pts], cluster_data$Dim.1[hull_pts[1]])
+    hull_y <- c(cluster_data$Dim.2[hull_pts], cluster_data$Dim.2[hull_pts[1]])
+    
+    hulls_list[[cluster_id]] <- data.frame(
+      x = hull_x,
+      y = hull_y,
+      cluster = cluster_id
+    )
+  }
+}
+
+# Combiner tous les hulls
+hulls_list <- hulls_list[!sapply(hulls_list, is.null)]
+
+if (length(hulls_list) > 0) {
+
+  hulls_df <- do.call(rbind, hulls_list)
+
+  # Hover texte des cercles
+  hulls_df$hover_text <- sapply(hulls_df$cluster, function(cid) {
+    desc <- cluster_descriptions[[as.character(cid)]]
+    paste0(
+      "<b style='font-size:14px; color:#333;'>",
+      desc$titre,
+      "</b><br><br>",
+      "<b style='font-size:12px; text-align:left'>",
+      desc$description,
+      "</b>"
+    )
+  })
+
+  p_res.pca_clusters <- plot_ly() %>%
+    add_trace(
+      data = hulls_df,
+      x = ~x,
+      y = ~y,
+      type = "scatter",
+      mode = "lines",
+      fill = "toself",
+      hoveron = "fills", #important, ne pas supprimer. A une action sur l'affichage de la description du cluster sur le cercle
+      opacity = 0.15,
+      line = list(width = 2, dash = "dash"),
+      color = ~as.factor(cluster),
+      colors = colors_palette[1:n_clusters],
+      text = ~hover_text,
+      hoverinfo = "text",
+      hovertemplate = "%{text}<extra></extra>",
+      name= "",
+      showlegend = FALSE
+    ) %>%
+    add_trace(
+      data = coord_clusters,
+      x = ~Dim.1,
+      y = ~Dim.2,
+      color = ~cluster,
+      colors = colors_palette[1:n_clusters],
+      type = "scatter",
+      mode = "markers+text",
+      text = ~produit,
+      textposition = "top center",
+      marker = list(size = 5, opacity = 0.85),
+      hoverinfo = "skip",
+      showlegend = TRUE
+    ) %>%
+    layout(
+    height = 900, 
+    title = list(
+      text = "<b style='font-size:24px;'>Cartographie Interactive : Positionnement et Groupes de Produits</b><br><sub>Survolez les cercles pour la description du groupe</sub>",
+      font = list(size = 18)
+    ),
+    xaxis = list(
+      title = paste0("<b>Axe 1 : ", round(var_expliquee[1], 1), "%</b>"),
+      zeroline = TRUE,
+      gridwidth = 1,
+      gridcolor = 'rgba(0, 0, 0, 0.1)',
+      showgrid = TRUE
+    ),
+    yaxis = list(
+      title = paste0("<b>Axe 2 : ", round(var_expliquee[2], 1), "%</b>"),
+      zeroline = TRUE,
+      gridwidth = 1,
+      gridcolor = 'rgba(0, 0, 0, 0.1)',
+      showgrid = TRUE
+    ),
+    hovermode = 'closest',
+    autosize = TRUE,
+    font = list(family = "Arial, sans-serif", size = 12),
+    plot_bgcolor = 'white',
+    paper_bgcolor = 'white',
+    margin = list(l = 60, r = 100, t = 80, b = 40),
+    showlegend = TRUE,
+    legend = list(
+      title = list(text = "<b>GROUPES</b>", font = list(size = 14)),
+      x = 1.02,
+      y = 1,
+      font = list(size = 12),
+      bgcolor = 'rgba(255, 255, 255, 0.9)',
+      bordercolor = '#ddd',
+      borderwidth = 1
+    )
+  ) %>%
+    config(responsive = TRUE, displayModeBar = TRUE, displaylogo = FALSE)
+
+  p_res.pca_clusters
+}
+```
+
+
+*Cette carte résume **`r round(var_cumulee[2], 1)`% de l'information sensorielle** collectée lors des évaluations.*
+
+
+# Liste des produits
+
+Retrouvez ici chaque produit de la cartographie avec sa photo et son code de référence. 
+Les **badges colorés** correspondent aux groupes visibles sur la carte.
+
+```{r products-gallery, results='asis'}
+
+infos_produits <- read.csv2("products_info.csv", stringsAsFactors = FALSE, row.names = 1)
+
+# Charger et préparer infos produits avec clusters
+galerie <- data.frame(
+  produit = rownames(infos_produits),
+  photo   = infos_produits$photo,
+  code_PF = infos_produits$code_PF,
+  cluster = clusters
+) %>%
+  mutate(
+    photo = trimws(photo),
+    photo = normalizePath(photo, winslash = "/", mustWork = FALSE)
+  ) %>%
+  arrange(cluster, produit)
+
+
+# Affichage galerie
+cat("<div class='galerie-grid'>\n\n")
+
+colors_map <- c("1" = "#FF6B6B", "2" = "#4ECDC4", "3" = "#45B7D1", "4" = "#FFA07A")
+
+for (i in 1:nrow(galerie)) {
+  groupe <- galerie$cluster[i]
+  color_groupe <- colors_map[as.character(groupe)]
+  photo_path <- galerie$photo[i]
+  
+  cat("<div class='galerie-card'>\n")
+  cat("<h4>", galerie$produit[i], "</h4>\n")
+  cat("<p><span class='label'>Groupe:</span> ",
+      "<span class='galerie-groupe' style='background-color:", color_groupe, ";'>Groupe ", groupe, "</span></p>\n")
+  cat("<p><span class='label'>Code interne:</span> ", galerie$code_PF[i], "</p>\n")
+  
+  
+  if (!is.na(photo_path) && nchar(photo_path) > 0 && file.exists(photo_path)) {
+  
+  img_data <- base64enc::base64encode(photo_path)
+  ext  <- tolower(tools::file_ext(photo_path))
+  mime <- switch(ext, "jpg" = "image/jpeg", "jpeg" = "image/jpeg",
+                 "png" = "image/png", "webp" = "image/webp", "image/jpeg")
+  data_uri <- paste0("data:", mime, ";base64,", img_data)
+  
+  cat(paste0(
+    "<a href='#' class='glightbox' data-gallery='produits' ",
+    "data-src='", data_uri, "' ",
+    "data-title='", galerie$produit[i], "'>",
+    "<img src='", data_uri, "' class='galerie-image' alt='", galerie$produit[i], "'>",
+    "</a>\n"
+  ))
+} else {
+  cat("<div class='galerie-image' style='display:flex; align-items:center; justify-content:center; color:#ccc;'>")
+  cat("Image non disponible")
+  cat("</div>\n")
+}
+  
+  cat("</div>\n\n")
+}
+
+cat("</div>\n")
+
+# Activation GLightbox
+cat("
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const lightbox = GLightbox({
+    selector: '.glightbox',
+    touchNavigation: true,
+    loop: true,
+    zoomable: true,
+    elements: Array.from(document.querySelectorAll('.glightbox')).map(el => ({
+      href: el.getAttribute('data-src'),
+      type: 'image',
+      title: el.getAttribute('data-title'),
+      gallery: el.getAttribute('data-gallery')
+    }))
+  });
+  
+  document.querySelectorAll('.glightbox').forEach((el, index) => {
+    el.addEventListener('click', function(e) {
+      e.preventDefault();
+      lightbox.openAt(index);
+    });
+  });
+});
+</script>
+")
+```
+
+
+# Explorez d'autres dimensions
+::: {.callout-note}
+Cette vue alternative croise la **Dimension 1** avec la **Dimension 3** pour révéler des différences supplémentaires.
+:::
+
+```{r viz-other-dims, fig.width=14, fig.height=10, include=TRUE}
+          
+# PC1 vs PC3
+coord_pc1_pc3 <- as.data.frame(res.pca$ind$coord[, c(1, 3)])
+coord_pc1_pc3$produit <- rownames(moyennes)
+coord_pc1_pc3$cluster <- as.factor(clusters)
+
+# Hover text pour PC1 vs PC3
+coord_pc1_pc3$hover_text <- sapply(1:nrow(coord_pc1_pc3), function(i) {
+  cluster_id <- as.character(coord_pc1_pc3$cluster[i])
+  desc <- cluster_descriptions[[cluster_id]]
+  
+  paste0(
+    "<b style='font-size:14px; color:#333;'>", 
+    coord_pc1_pc3$produit[i], 
+    "</b><br><br>",
+    
+    "<hr style='border: 1px solid #ddd; margin: 8px 0;'>",
+    "<b style='font-size:13px; color:#0066cc;'>",
+    desc$titre,
+    "</b><br>",
+    "<p style='font-size:12px; margin: 8px 0;'>",
+    desc$description,
+    "</p>"
+  )
+})
+
+# PC1 vs PC3
+p_pc1_pc3 <- plot_ly(
+  data = coord_pc1_pc3,
+  x = ~Dim.1,
+  y = ~Dim.3,
+  color = ~cluster,
+  colors = colors_palette[1:n_clusters],
+  type = 'scatter',
+  mode = 'markers',
+  marker = list(size = 16, opacity = 0.8, line = list(width = 2, color = 'white')),
+  text = coord_pc1_pc3$hover_text,
+  hovertemplate = '%{text}<extra></extra>'
+) %>%
+  layout(
+    title = "<b>Vue Alternative : Dimension 1 vs Dimension 3</b>",
+    xaxis = list(title = paste0("<b>PC1 (", round(var_expliquee[1], 1), "%)</b>")),
+    yaxis = list(title = paste0("<b>PC3 (", round(var_expliquee[3], 1), "%)</b>")),
+    width = 1200,
+    height = 800,
+    plot_bgcolor = 'rgba(245, 250, 255, 1)',
+    showlegend = FALSE
+  )
+
+p_pc1_pc3
+```
+
+
+:::
