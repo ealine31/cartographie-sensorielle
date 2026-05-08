@@ -32,7 +32,7 @@ readr, dplyr, tidyr, FactoMineR, factoextra, ggplot2, plotly, RColorBrewer, html
 
 The `analyses.R` file also uses:
 ```r
-SensoMineR, agricolae, explor, FactoInvestigate, Factoshiny
+SensoMineR, agricolae
 ```
 
 ---
@@ -41,7 +41,7 @@ SensoMineR, agricolae, explor, FactoInvestigate, Factoshiny
 
 ```
 your-project/
-├── cosmetics-analysis-OPTIMIZED.qmd   # Main Quarto document
+├── sensory_cartography_visualization.qmd   # Main Quarto document
 ├── analyses.R                         # PCA and HAC computations
 ├── cluster_descriptions.R             # Cluster labels and descriptions (to customize)
 ├── custom-style.css                   # Visual styling
@@ -99,7 +99,7 @@ In `analyses.R`, update the data file name:
 moyennes <- read.csv2("your_data.csv", row.names = 1)
 ```
 
-In `cosmetics-analysis-OPTIMIZED.qmd`, update the product info file name:
+In `sensory_cartography_visualization.qmd`, update the product info file name:
 ```r
 infos_produits <- read.csv2("products_info.csv", stringsAsFactors = FALSE, row.names = 1)
 ```
@@ -113,10 +113,10 @@ nb_clusters <- 4  # adjust to your data
 
 ### 5. Render the HTML
 
-Open `cosmetics-analysis-OPTIMIZED.qmd` in RStudio and click **Render** — or run in the terminal:
+Open `sensory_cartography_visualization.qmd` in RStudio and click **Render** — or run in the terminal:
 
 ```bash
-quarto render cosmetics-analysis-OPTIMIZED.qmd
+quarto render sensory_cartography_visualization.qmd
 ```
 
 The output file `index.html` will be generated in the same folder.
