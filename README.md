@@ -101,6 +101,9 @@ source("cluster_descriptions.R")
 # Palette couleurs clusters (vibrante et distinct)
 colors_palette <- c("#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A")
 
+Description des axes
+Axe horizontal (Dimension 1) : Axe description 
+Axe vertical (Dimension 2) : Axe description
 ```
 
 ### 4. Update file paths
