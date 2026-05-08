@@ -91,8 +91,19 @@ cluster_descriptions <- list(
   # Add as many clusters as needed
 )
 ```
+### 3. Customize axes description 
 
-### 3. Update file paths
+Open `sensory_cartography_visualization.qmd` and update axes descriptions:
+
+```{r setup-analyses, include=FALSE}
+source("analyses.R")
+source("cluster_descriptions.R")
+# Palette couleurs clusters (vibrante et distinct)
+colors_palette <- c("#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A")
+
+```
+
+### 4. Update file paths
 
 In `analyses.R`, update the data file name:
 ```r
@@ -104,14 +115,14 @@ In `sensory_cartography_visualization.qmd`, update the product info file name:
 infos_produits <- read.csv2("products_info.csv", stringsAsFactors = FALSE, row.names = 1)
 ```
 
-### 4. Set the number of clusters
+### 5. Set the number of clusters
 
 In `analyses.R`, set the number of clusters after inspecting your dendrogram:
 ```r
 nb_clusters <- 4  # adjust to your data
 ```
 
-### 5. Render the HTML
+### 6. Render the HTML
 
 Open `sensory_cartography_visualization.qmd` in RStudio and click **Render** — or run in the terminal:
 
