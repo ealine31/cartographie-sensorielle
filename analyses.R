@@ -4,9 +4,6 @@ library(factoextra)
 library(SensoMineR)
 library(agricolae)
 library(tidyverse)
-library(explor)
-library(FactoInvestigate)
-library(Factoshiny)
 
 #Importation du fichier de données en csv
 moyennes <- read.csv2("moyennes_corrigees_V2.csv", row.names = 1)
