@@ -1,4 +1,4 @@
-# 🌿 Sensory Cartography
+# Sensory Cartography
 
 An interactive HTML report for visualizing sensory evaluation data using Principal Component Analysis (PCA) and Hierarchical Clustering (HAC).
 
